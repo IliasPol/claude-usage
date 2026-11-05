@@ -25,5 +25,24 @@
     "scripts/",
     "README.md",
     "LICENSE"
+  ],
+  "homepage": "https://github.com/IliasPol/claude-usage#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IliasPol/claude-usage.git"
+  },
+  "bugs": {
+    "url": "https://github.com/IliasPol/claude-usage/issues"
+  },
+  "keywords": [
+    "claude-code",
+    "claude",
+    "usage-tracker",
+    "token-usage",
+    "cost-tracking",
+    "terminal-ui",
+    "analytics",
+    "developer-tools",
+    "cli"
   ]
 }
