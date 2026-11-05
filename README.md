@@ -1,6 +1,6 @@
 # Claude Usage Explorer
 
-A local, read-only usage explorer for Claude Code. Browse projects, sessions, agents and models, inspect token usage and estimated API-equivalent costs, and optionally view cached Claude Desktop plan-limit percentages. No external npm dependencies or telemetry.
+**Track Claude Code token usage, model costs, projects, sessions, and agents — locally.** Explore usage in a standalone terminal dashboard or native Claude Code sidebar. No external npm dependencies, uploads, or telemetry.
 
 > **v1.0.0:** The standalone TUI is available via npm. Native sidebar integration requires a compatible Claude Code version; the external-terminal launcher may vary by environment.
 
@@ -34,6 +34,24 @@ node ./bin/claude-usage.mjs tui
 ```
 
 Run the TUI in an **interactive terminal**, not inside a noninteractive Claude tool shell. The optional macOS/Linux installer `./scripts/install-command.sh` is still available for source checkouts but is not needed for npm installations.
+
+## Install through the Claude Code plugin marketplace
+
+In Claude Code, add this community marketplace and install the plugin:
+
+```text
+/plugin marketplace add IliasPol/claude-usage
+/plugin install claude-usage@claude-usage-explorer-marketplace
+```
+
+Or use the Claude CLI from a terminal:
+
+```sh
+claude plugin marketplace add IliasPol/claude-usage
+claude plugin install claude-usage@claude-usage-explorer-marketplace
+```
+
+This repository hosts a **community marketplace**, not an Anthropic-curated listing. After installation, use `/usage-explorer` in compatible Claude Code environments. Native mod/sidebar support may depend on the installed Claude Code version; if it is unavailable, the standalone `claude-usage tui` remains an option.
 
 ## Run the native Claude Code sidebar
 
