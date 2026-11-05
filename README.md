@@ -1,8 +1,41 @@
 # Claude Usage Explorer
 
-**Track Claude Code token usage, model costs, projects, sessions, and agents — locally.** Explore usage in a standalone terminal dashboard or native Claude Code sidebar. No external npm dependencies, uploads, or telemetry.
+**Explore Claude Code token usage, estimated API-equivalent costs, projects, sessions, and agents — locally.** Use a native Claude Code sidebar or a standalone terminal dashboard. No uploads, telemetry, or external npm dependencies.
 
-> **v1.0.0:** The standalone TUI is available via npm. Native sidebar integration requires a compatible Claude Code version; the external-terminal launcher may vary by environment.
+[![npm version](https://img.shields.io/npm/v/claude-usage-explorer.svg)](https://www.npmjs.com/package/claude-usage-explorer)
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+## Preview
+
+### Native Claude Code sidebar
+
+![Claude Usage Explorer inside the Claude Code sidebar](docs/screenshots/native-sidebar.png)
+
+Use `/usage-explorer` to inspect local usage without leaving your Claude Code session.
+
+### Standalone terminal dashboard
+
+![Claude Usage Explorer standalone terminal dashboard](docs/screenshots/standalone-tui.png)
+
+Run `claude-usage tui` to explore projects, sessions, token usage, model breakdowns, and estimated costs.
+
+## Quick start
+
+**Standalone CLI (Node.js 20+):**
+
+```sh
+npm install -g claude-usage-explorer
+claude-usage tui
+```
+
+**Claude Code community plugin marketplace:**
+
+```sh
+claude plugin marketplace add IliasPol/claude-usage
+claude plugin install claude-usage@claude-usage-explorer-marketplace
+```
+
+Then run `/usage-explorer` in a compatible Claude Code session.
 
 ## Requirements
 
@@ -10,16 +43,9 @@
 - Claude Code with native Mods support for the sidebar
 - Local Claude Code JSONL transcript history
 
-## Install the standalone CLI (npm)
+## Standalone CLI: other ways to run
 
-Install the published npm package globally with Node.js 20+:
-
-```sh
-npm install -g claude-usage-explorer
-claude-usage tui
-```
-
-Or run it without a global installation:
+Run without a global installation:
 
 ```sh
 npx --yes --package claude-usage-explorer claude-usage tui
@@ -35,25 +61,13 @@ node ./bin/claude-usage.mjs tui
 
 Run the TUI in an **interactive terminal**, not inside a noninteractive Claude tool shell. The optional macOS/Linux installer `./scripts/install-command.sh` is still available for source checkouts but is not needed for npm installations.
 
-## Install through the Claude Code plugin marketplace
+## Claude Code plugin installation
 
-In Claude Code, add this community marketplace and install the plugin:
-
-```text
-/plugin marketplace add IliasPol/claude-usage
-/plugin install claude-usage@claude-usage-explorer-marketplace
-```
-
-Or use the Claude CLI from a terminal:
-
-```sh
-claude plugin marketplace add IliasPol/claude-usage
-claude plugin install claude-usage@claude-usage-explorer-marketplace
-```
+Alternatively, from inside Claude Code use `/plugin marketplace add IliasPol/claude-usage`, followed by `/plugin install claude-usage@claude-usage-explorer-marketplace`.
 
 This repository hosts a **community marketplace**, not an Anthropic-curated listing. After installation, use `/usage-explorer` in compatible Claude Code environments. Native mod/sidebar support may depend on the installed Claude Code version; if it is unavailable, the standalone `claude-usage tui` remains an option.
 
-## Run the native Claude Code sidebar
+## Native sidebar: local development
 
 Start Claude Code with the local plugin directory:
 
@@ -64,20 +78,6 @@ claude --plugin-dir /absolute/path/to/claude-usage-explorer
 Then use `/usage-explorer`. In Claude Code CLI, `/tui fullscreen` may be required for the sidebar to appear. The native command is **`/usage-explorer`**, not `/claude-usage:open`.
 
 The optional `/claude-usage:tui` skill attempts to open a **separate** terminal. This requires one model invocation and depends on your terminal environment. If no terminal appears, launch `node ./bin/claude-usage.mjs tui` directly in PowerShell or Terminal.
-
-## Screenshots
-
-### Native Claude Code sidebar
-
-![Claude Usage Explorer inside the Claude Code sidebar](docs/screenshots/native-sidebar.png)
-
-Run `/usage-explorer` in Claude Code to inspect local usage without leaving your session.
-
-### Standalone terminal UI
-
-![Claude Usage Explorer standalone terminal dashboard](docs/screenshots/standalone-tui.png)
-
-Run `claude-usage tui` for a full-screen view of projects, token usage, model breakdowns, and estimated costs.
 
 ## Features
 
@@ -107,10 +107,10 @@ npm run check
 
 The GitHub Actions workflow tests on Windows, macOS and Ubuntu.
 
-## Contributing and security
+## Contributing, security, and license
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md). Licensed under [MIT](LICENSE).
+Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md). Please report vulnerabilities following [SECURITY.md](SECURITY.md). This project is licensed under the [MIT License](LICENSE).
 
 ## Support
 
-If this project is useful, you can [star the repository](https://github.com/IliasPol/claude-usage). Optional GitHub Sponsors support may be enabled later. No donation or payment is required to use the project.
+If Claude Usage Explorer is useful, consider [starring the repository](https://github.com/IliasPol/claude-usage). The tool is free and open source.
