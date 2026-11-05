@@ -1,6 +1,6 @@
 {
   "name": "claude-usage-explorer",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Local, read-only Claude Code usage analytics CLI and plugin",
   "type": "module",
   "bin": {
