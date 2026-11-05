@@ -10,15 +10,30 @@ A local, read-only usage explorer for Claude Code. Browse projects, sessions, ag
 - Claude Code with native Mods support for the sidebar
 - Local Claude Code JSONL transcript history
 
-## Run the standalone terminal UI
+## Install the standalone CLI (npm)
 
-From this repository:
+Once this package is published on npm, install it globally with Node.js 20+:
+
+```sh
+npm install -g claude-usage-explorer
+claude-usage tui
+```
+
+Or run it without a global installation:
+
+```sh
+npx --yes --package claude-usage-explorer claude-usage tui
+```
+
+**Note:** These commands will work only after the package is published to the npm registry. The GitHub repository alone does not publish an npm package. On Windows PowerShell, use `npm.cmd` and `claude-usage.cmd` if execution policy blocks the `.ps1` shims.
+
+To run directly from a local checkout, use:
 
 ```sh
 node ./bin/claude-usage.mjs tui
 ```
 
-Run in an **interactive terminal**, not inside a noninteractive Claude tool shell. On macOS/Linux you can optionally run `./scripts/install-command.sh` and then `claude-usage tui` (ensure `~/.local/bin` is on PATH).
+Run the TUI in an **interactive terminal**, not inside a noninteractive Claude tool shell. The optional macOS/Linux installer `./scripts/install-command.sh` is still available for source checkouts but is not needed for npm installations.
 
 ## Run the native Claude Code sidebar
 
@@ -44,7 +59,7 @@ The optional `/claude-usage:tui` skill attempts to open a **separate** terminal.
 
 ## Windows
 
-In PowerShell, from the extracted project directory:
+In PowerShell, from the extracted project directory (or use the npm installation above):
 
 ```powershell
 node .\bin\claude-usage.mjs tui
