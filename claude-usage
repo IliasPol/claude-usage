@@ -1,0 +1,20 @@
+#!/bin/sh
+# Portable launcher: run directly from this folder, without npm global shims.
+set -eu
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+if [ -n "${CLAUDE_USAGE_NODE:-}" ]; then
+  NODE="$CLAUDE_USAGE_NODE"
+elif command -v node >/dev/null 2>&1 && node -e 'process.exit(Number(process.versions.node.split(".")[0]) < 20)' >/dev/null 2>&1; then
+  NODE=$(command -v node)
+else
+  NODE=''
+  for candidate in "$HOME"/.asdf/installs/nodejs/22.22.2/bin/node "$HOME"/.asdf/installs/nodejs/22.22.1/bin/node "$HOME"/.asdf/installs/nodejs/24.18.0/bin/node "$HOME"/.asdf/installs/nodejs/20.19.5/bin/node; do
+    if [ -x "$candidate" ]; then NODE="$candidate"; break; fi
+  done
+  if [ -z "$NODE" ]; then
+    printf '%s\n' 'Claude Usage Explorer requires Node.js 20+. Set CLAUDE_USAGE_NODE to its executable path.' >&2
+    exit 1
+  fi
+fi
+if [ "$#" -eq 0 ]; then set -- tui; fi
+exec "$NODE" "$ROOT/bin/claude-usage.mjs" "$@"

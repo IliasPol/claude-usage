@@ -1,0 +1,5 @@
+{
+  "name": "claude-usage",
+  "description": "Interactive native Claude Code usage sidebar and standalone TUI",
+  "version": "1.0.0"
+}

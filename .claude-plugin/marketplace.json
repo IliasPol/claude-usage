@@ -1,0 +1,5 @@
+{
+  "name": "claude-usage-explorer-marketplace",
+  "owner": {"name": "Claude Usage Explorer contributors"},
+  "plugins": [{"name": "claude-usage", "source": "./", "description": "Local Claude Code usage explorer"}]
+}

@@ -1,0 +1,18 @@
+{
+  "name": "claude-usage-explorer",
+  "version": "1.0.0",
+  "description": "Local, read-only Claude Code usage analytics CLI and plugin",
+  "type": "module",
+  "bin": {
+    "claude-usage": "./bin/claude-usage.mjs"
+  },
+  "scripts": {
+    "test": "node --test",
+    "start": "node ./bin/claude-usage.mjs",
+    "check": "node --check ./src/core.mjs && node --check ./src/statusline.mjs && node --check ./bin/claude-usage.mjs && node --check ./src/tui.mjs && node --check ./src/launcher.mjs && node --check ./src/snapshot.mjs && node --check ./hooks/usage-explorer.mjs && node --check ./src/plan-usage.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}
