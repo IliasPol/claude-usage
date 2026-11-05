@@ -1,5 +1,30 @@
 {
   "name": "claude-usage-explorer-marketplace",
-  "owner": {"name": "Claude Usage Explorer contributors"},
-  "plugins": [{"name": "claude-usage", "source": "./", "description": "Local Claude Code usage explorer"}]
+  "description": "Local, read-only Claude Code token usage analytics and terminal tools",
+  "owner": {
+    "name": "IliasPol",
+    "url": "https://github.com/IliasPol"
+  },
+  "plugins": [
+    {
+      "name": "claude-usage",
+      "source": "./",
+      "description": "Explore Claude Code projects, sessions, token usage, model breakdowns and estimated costs locally",
+      "version": "1.0.0",
+      "author": {
+        "name": "IliasPol"
+      },
+      "homepage": "https://github.com/IliasPol/claude-usage",
+      "repository": "https://github.com/IliasPol/claude-usage",
+      "license": "MIT",
+      "category": "development",
+      "tags": [
+        "claude-code",
+        "usage",
+        "analytics",
+        "tokens",
+        "terminal"
+      ]
+    }
+  ]
 }
