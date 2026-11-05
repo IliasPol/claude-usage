@@ -2,7 +2,7 @@
 
 A local, read-only usage explorer for Claude Code. Browse projects, sessions, agents and models, inspect token usage and estimated API-equivalent costs, and optionally view cached Claude Desktop plan-limit percentages. No external npm dependencies or telemetry.
 
-> **Release candidate:** v1.0.0. The standalone terminal UI is automated-test verified. Native Claude Code mod integration and the external-terminal launcher require final host verification before a stable release.
+> **v1.0.0:** The standalone TUI is available via npm. Native sidebar integration requires a compatible Claude Code version; the external-terminal launcher may vary by environment.
 
 ## Requirements
 
@@ -12,7 +12,7 @@ A local, read-only usage explorer for Claude Code. Browse projects, sessions, ag
 
 ## Install the standalone CLI (npm)
 
-Once this package is published on npm, install it globally with Node.js 20+:
+Install the published npm package globally with Node.js 20+:
 
 ```sh
 npm install -g claude-usage-explorer
@@ -25,7 +25,7 @@ Or run it without a global installation:
 npx --yes --package claude-usage-explorer claude-usage tui
 ```
 
-**Note:** These commands will work only after the package is published to the npm registry. The GitHub repository alone does not publish an npm package. On Windows PowerShell, use `npm.cmd` and `claude-usage.cmd` if execution policy blocks the `.ps1` shims.
+**Note:** On Windows PowerShell, use `npm.cmd` and `claude-usage.cmd` if execution policy blocks the `.ps1` shims.
 
 To run directly from a local checkout, use:
 
@@ -46,6 +46,10 @@ claude --plugin-dir /absolute/path/to/claude-usage-explorer
 Then use `/usage-explorer`. In Claude Code CLI, `/tui fullscreen` may be required for the sidebar to appear. The native command is **`/usage-explorer`**, not `/claude-usage:open`.
 
 The optional `/claude-usage:tui` skill attempts to open a **separate** terminal. This requires one model invocation and depends on your terminal environment. If no terminal appears, launch `node ./bin/claude-usage.mjs tui` directly in PowerShell or Terminal.
+
+## Screenshots
+
+Real screenshots of the native sidebar and standalone TUI will be added here after capture and review. Please avoid including personal project names, file paths, account details, or other private information in screenshots.
 
 ## Features
 
@@ -81,4 +85,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md). Licensed 
 
 ## Support
 
-If this project is useful, you can star the repository. GitHub Sponsors may be enabled later; no donation or payment service is required to use the project.
+If this project is useful, you can [star the repository](https://github.com/IliasPol/claude-usage). Optional GitHub Sponsors support may be enabled later. No donation or payment is required to use the project.
