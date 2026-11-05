@@ -49,7 +49,17 @@ The optional `/claude-usage:tui` skill attempts to open a **separate** terminal.
 
 ## Screenshots
 
-Real screenshots of the native sidebar and standalone TUI will be added here after capture and review. Please avoid including personal project names, file paths, account details, or other private information in screenshots.
+### Native Claude Code sidebar
+
+![Claude Usage Explorer inside the Claude Code sidebar](docs/screenshots/native-sidebar.png)
+
+Run `/usage-explorer` in Claude Code to inspect local usage without leaving your session.
+
+### Standalone terminal UI
+
+![Claude Usage Explorer standalone terminal dashboard](docs/screenshots/standalone-tui.png)
+
+Run `claude-usage tui` for a full-screen view of projects, token usage, model breakdowns, and estimated costs.
 
 ## Features
 
