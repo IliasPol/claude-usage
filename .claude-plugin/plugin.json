@@ -1,5 +1,11 @@
 {
   "name": "claude-usage",
-  "description": "Interactive native Claude Code usage sidebar and standalone TUI",
-  "version": "1.0.0"
+  "description": "Local, read-only Claude Code usage analytics with a native sidebar and standalone terminal UI",
+  "version": "1.0.0",
+  "author": {
+    "name": "IliasPol"
+  },
+  "homepage": "https://github.com/IliasPol/claude-usage",
+  "repository": "https://github.com/IliasPol/claude-usage",
+  "license": "MIT"
 }
