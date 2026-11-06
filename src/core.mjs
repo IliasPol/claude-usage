@@ -85,11 +85,12 @@ export function costFor(model,m,rates=DEFAULT_RATES) {
   return (m.input*rate[0]+m.output*rate[1]+writeCost+m.cacheRead*rate[3])/1e6;
 }
 export function parseFile(file, rates=DEFAULT_RATES) {
-  const id=sessionIdentity(file);const requests=new Map();let title=null,cwd=null,start=null,end=null,sessionId=null;
+  const id=sessionIdentity(file);const requests=new Map();let title=null,cwd=null,start=null,end=null,sessionId=null,agentName=null;
   const bad=readLines(file,r=>{
     if(!r || typeof r!=='object') return;
     if(typeof r.cwd==='string') cwd=r.cwd;
     if(typeof r.sessionId==='string') sessionId=r.sessionId;
+    if(id.isSubagent&&!agentName){const candidate=r.agentType||r.agentName||r.agent_type||r.agent_name;if(typeof candidate==='string'&&candidate.trim()&&candidate.length<=100)agentName=candidate.trim();}
     const ts=Date.parse(r.timestamp);
     if(Number.isFinite(ts)) {start=Math.min(start??ts,ts);end=Math.max(end??ts,ts);}
     if(!title && r.type==='user') {
@@ -112,12 +113,12 @@ export function parseFile(file, rates=DEFAULT_RATES) {
       if(Number.isFinite(ts)) prev.timestamp=Math.min(prev.timestamp??ts,ts);
     } else requests.set(key,{...m,model,timestamp:Number.isFinite(ts)?ts:null});
   });
-  return {file,sessionId:sessionId||id.id,agent:id.agent,isSubagent:id.isSubagent,title,cwd,start,end,bad,requests:[...requests.values()]};
+  return {file,sessionId:sessionId||id.id,agent:id.agent,isSubagent:id.isSubagent,agentName,title,cwd,start,end,bad,requests:[...requests.values()]};
 }
 
 // Cache derived metadata and token counters only. Never persist transcript text beyond
 // the short session title. Cache invalidates when file size/mtime changes.
-const CACHE_VERSION=3;
+const CACHE_VERSION=4;
 const cacheDir=()=>path.join(os.homedir(),'.claude-usage-explorer','cache-v3');
 function readCachedFile(file){
   const st=fs.statSync(file);
@@ -151,7 +152,8 @@ export function ingest(roots,rates=DEFAULT_RATES) {
     if(parsed.start!==null) s.start=Math.min(s.start??parsed.start,parsed.start);
     if(parsed.end!==null) s.end=Math.max(s.end??parsed.end,parsed.end);
     let agent=s.agents.get(parsed.agent);
-    if(!agent) {agent={id:parsed.agent,requests:[]};s.agents.set(parsed.agent,agent);}
+    if(!agent) {agent={id:parsed.agent,name:parsed.agentName||null,requests:[]};s.agents.set(parsed.agent,agent);}
+    if(!agent.name&&parsed.agentName)agent.name=parsed.agentName;
     agent.requests.push(...parsed.requests);
   }
   return {sessions:[...sessions.values()],files:files.length,malformed,roots};
@@ -208,7 +210,7 @@ export function summarize(data,window=[-Infinity,Infinity],rates=DEFAULT_RATES) 
         if(!byModel.has(r.model))byModel.set(r.model,ZERO());add(byModel.get(r.model),one);
         if(!models.has(r.model))models.set(r.model,ZERO());add(models.get(r.model),one);
       }
-      if(am.requests){add(stat,am);agents.push({id:a.id,stats:am,models:[...byModel].map(([name,stats])=>({name,stats}))});}
+      if(am.requests){add(stat,am);agents.push({id:a.id,name:a.name||null,stats:am,models:[...byModel].map(([name,stats])=>({name,stats}))});}
     }
     if(!stat.requests)continue;
     const project=s.cwd||'(unknown project)';

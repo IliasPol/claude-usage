@@ -36,7 +36,7 @@ export function createExplorer(data,{cwd=process.cwd(),settings=readSettings(),p
  function rows(){let list=[];
   if(view==='projects')list=report.projects.map(x=>({...x,label:path.basename(x.name)||x.name}));
   if(view==='sessions')list=report.sessions.filter(x=>!project||x.project===project.name).map(x=>({...x,label:x.title}));
-  if(view==='agents')list=(session?.agents||[]).map(x=>({...x,label:x.id==='main'?'Main agent':`Subagent ${x.id}`}));
+  if(view==='agents')list=(session?.agents||[]).map(x=>({...x,label:x.id==='main'?'Agent (main)':(x.name||x.type||'Subagent')}));
   if(view==='models')list=(agent?.models||session?.models||project?.models||report.models).map(x=>({...x,label:x.name}));
   if(view==='periods')list=periods.map(([,v])=>({label:describePeriod(v,settings),value:v,stats:empty}));
   if(view==='settings')list=[{label:`Billing: day ${settings.billingDay||'not set'} at ${String(settings.billingHour||0).padStart(2,'0')}:${String(settings.billingMinute||0).padStart(2,'0')} ${settings.billingTimeZone||'UTC'}`,value:'billing',stats:empty},{label:`Custom model prices: ${Object.keys(settings.rates||{}).length} configured`,value:'rates',stats:empty},{label:'Rescan history (R)',value:'rescan',stats:empty}];

@@ -17,6 +17,7 @@ let inFlight=null;
 const total=s=>(s?.input||0)+(s?.output||0)+(s?.cacheRead||0)+(s?.cacheWrite||0);
 const compact=n=>Intl.NumberFormat('en-US',{notation:'compact',maximumFractionDigits:1}).format(n||0);
 const price=s=>s?.unknownCostRequests?'N/A':`$${(s?.knownCost||0).toFixed(2)}`;
+export const agentLabel=a=>a?.id==='main'?'Agent (main)':(a?.name||a?.type||'Subagent');
 const name=p=>String(p||'').replace(/\\/g,'/').split('/').filter(Boolean).pop()||p;
 const change=($,patch)=>{state={...state,...patch};void $.ui.invalidate('ui.render');};
 export function itemsFor(s=state){
@@ -25,7 +26,7 @@ export function itemsFor(s=state){
   let items=[];
   if(s.view==='projects')items=r.projects.map(x=>({id:x.name,label:name(x.name),stats:x.stats,source:x}));
   if(s.view==='sessions')items=r.sessions.filter(x=>!s.project||x.project===s.project).map(x=>({id:x.id,label:x.title,stats:x.stats,source:x}));
-  if(s.view==='agents'){const current=r.sessions.find(x=>x.id===s.session?.id)||s.session;items=(current?.agents||[]).map(x=>({id:x.id,label:x.id==='main'?'Main agent':x.id,stats:x.stats,source:x}));}
+  if(s.view==='agents'){const current=r.sessions.find(x=>x.id===s.session?.id)||s.session;items=(current?.agents||[]).map(x=>({id:x.id,label:agentLabel(x),stats:x.stats,source:x}));}
   if(s.view==='models'){const current=r.sessions.find(x=>x.id===s.session?.id)||s.session;items=modelScope(s).map(x=>({id:x.name,label:x.name,stats:x.stats,source:x}));}
   if(s.query)items=items.filter(x=>x.label.toLowerCase().includes(s.query.toLowerCase()));
   return items.sort((a,b)=>s.sort==='cost'?(b.stats.knownCost-a.stats.knownCost):total(b.stats)-total(a.stats));
@@ -94,7 +95,7 @@ export function register(on){
     const models=()=>{if(state.view==='models'){change($,back(state));return;}change($,{...state,stack:[...state.stack,{view:state.view,project:state.project,session:state.session,agent:state.agent}],view:'models',query:''});};
     const periodButtons=PERIODS.map(([label,id])=>Button({key:`period-${id}`,plain:true,label:id===state.period?`● ${label}`:`  ${label}`,onPress:()=>{change($,{period:id,periodMenu:false});void refresh($);}}));
     const action=(label,hotkey,fn)=>Button({key:`action-${label}`,plain:true,label,hotkey,onPress:fn});
-    const path=[state.project&&name(state.project),state.session?.title,state.agent?.id].filter(Boolean);
+    const path=[state.project&&name(state.project),state.session?.title,state.agent&&agentLabel(state.agent)].filter(Boolean);
     const breadcrumb=`${state.view.toUpperCase()}${path.length?'  /  '+path.join(' / '):''}`;
     const stats=state.report?.overall;
     const plan=state.planUsage;
@@ -138,6 +139,7 @@ export function register(on){
         planSection,
         divider(),
         Text({bold:true,wrap:'truncate-end',children:breadcrumb}),
+        ...(state.agent?.id&&state.agent.id!=='main'?[Text({dimColor:true,children:`Agent ID: ${state.agent.id}`})]:[]),
         Input({key:'usage-filter',placeholder:'Search projects / sessions…',value:state.query,onInput:v=>change($,{query:v}),onSubmit:v=>change($,{query:typeof v==='string'?v:state.query})}),
         ...(state.periodMenu?[
           Text({bold:true,children:'CHOOSE PERIOD'}),
