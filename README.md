@@ -7,6 +7,8 @@
 
 ## What's new in v1.1.0
 
+- **Session actions:** open or copy session identifiers from supported views.
+- **Account usage diagnostics:** optional official usage-limit and extra-spend information when accessible; not the same as estimated API-equivalent cost.
 - **Cleaner agent navigation:** the main agent appears as **Agent (main)**; subagents use a recorded name when available, or **Subagent** when metadata is missing. Opaque agent IDs are shown only after opening an agent.
 - **Native sidebar and standalone terminal explorer:** navigate projects, sessions, agents, and models with token and API-equivalent cost breakdowns.
 - **Live refresh and flexible views:** filter and sort usage, switch reporting periods, and see per-model summaries.
