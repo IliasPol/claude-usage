@@ -2,8 +2,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import readline from 'node:readline';
-import {ingest,projectRoots,summarize,timeWindow,totalTokens,number,DEFAULT_RATES} from './core.mjs';
+import {spawnSync} from 'node:child_process';
 import {readPlanUsage} from './plan-usage.mjs';
+import {ingest,projectRoots,summarize,timeWindow,totalTokens,number,DEFAULT_RATES} from './core.mjs';
 
 const periods=[['Current billing cycle','cycle'],['Previous billing cycle','previous-cycle'],['All time','all'],['Today','today'],['Yesterday','yesterday'],['Last 7 days','7d'],['Last 30 days','30d'],['This month','month'],['Previous month','previous-month'],['Custom dates','custom']];
 export function describePeriod(period, settings={}, now=Date.now()){
@@ -25,10 +26,10 @@ function saveSettings(s){fs.mkdirSync(path.dirname(settingFile()),{recursive:tru
 const sortColumns=[['cost','Est. USD'],['tokens','Tokens'],['requests','Requests'],['input','Input'],['output','Output'],['cacheWrite','Cache write'],['cacheRead','Cache read'],['name','Name']];
 const value=(r,key)=>key==='tokens'?totalTokens(r.stats):key==='cost'?r.stats.unknownCostRequests?null:r.stats.knownCost:key==='name'?r.label.toLowerCase():r.stats[key];
 const empty={requests:0,input:0,output:0,cacheWrite:0,cacheRead:0,knownCost:0,unknownCostRequests:0};
-export function createExplorer(data,{cwd=process.cwd(),settings=readSettings(),period='all',planReader=readPlanUsage}={}){
- let liveState={enabled:true,lastUpdated:Date.now(),lastCheck:Date.now(),error:null};
+export function createExplorer(data,{cwd=process.cwd(),settings=readSettings(),period=settings.lastPeriod||'all',planReader=readPlanUsage}={}){
  let planUsage=null,planCheckedAt=0;
  function refreshPlan(now=Date.now()){if(now-planCheckedAt<4000)return;planCheckedAt=now;try{planUsage=planReader({now})||null;}catch{planUsage=null;}}
+ let liveState={enabled:true,lastUpdated:Date.now(),lastCheck:Date.now(),error:null};
  let sourceData=data,view='projects',selection=0,offset=0,stack=[],sort='tokens',descending=true,filter='',message='',currentPeriod=period,project=null,session=null,agent=null,report=null;
  const rates=()=>({...DEFAULT_RATES,...settings.rates});
  function refresh(){try{report=summarize(sourceData,timeWindow(currentPeriod,Date.now(),settings.billingDay,settings.billingTimeZone||'UTC',settings.billingHour||0,settings.billingMinute||0),rates());message=report.overall.unknownCostRequests?`${fmt(report.overall.unknownCostRequests)} requests have unknown model prices. Configure rates in Settings (B).`:'';}catch(e){message=e.message;currentPeriod='all';report=summarize(sourceData,undefined,rates());}}
@@ -52,7 +53,7 @@ export function createExplorer(data,{cwd=process.cwd(),settings=readSettings(),p
   if(view==='projects'){project=x;nav('sessions');}
   else if(view==='sessions'){session=x;nav('agents');}
   else if(view==='agents'){agent=x;nav('models');}
-  else if(view==='periods'){if(x.value==='custom')return 'custom';if(['cycle','previous-cycle'].includes(x.value)&&!(Number.isInteger(settings.billingDay)&&settings.billingDay>=1&&settings.billingDay<=31))return `billing-required:${x.value}`;currentPeriod=x.value;refresh();restore();}
+  else if(view==='periods'){if(x.value==='custom')return 'custom';if(['cycle','previous-cycle'].includes(x.value)&&!(Number.isInteger(settings.billingDay)&&settings.billingDay>=1&&settings.billingDay<=31))return `billing-required:${x.value}`;currentPeriod=x.value;settings.lastPeriod=currentPeriod;saveSettings(settings);refresh();restore();}
   else if(view==='settings')return x.value;
   else if(view==='sort'){setSort(x.value);restore();}
   else if(view==='models')message=`${x.name} · ${fmt(totalTokens(x.stats))} tokens · ${money(x.stats)} estimated USD`;
@@ -75,7 +76,7 @@ export function createExplorer(data,{cwd=process.cwd(),settings=readSettings(),p
  }
  function setLiveState(update){liveState={...liveState,...update};}
  function toggleLive(){liveState.enabled=!liveState.enabled;liveState.lastCheck=Date.now();}
- function setPeriod(p){currentPeriod=p;refresh();switchView('projects');}
+ function setPeriod(p){currentPeriod=p;settings.lastPeriod=p;saveSettings(settings);refresh();switchView('projects');}
  function setBillingDay(n,timeZone='UTC',hour=0,minute=0){settings.billingDay=n;settings.billingTimeZone=timeZone;settings.billingHour=hour;settings.billingMinute=minute;saveSettings(settings);refresh();message=`Billing saved: day ${n}, ${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')} ${timeZone}.`;}
  function setModelRate(model,values){settings.rates??={};settings.rates[model]=values;saveSettings(settings);refresh();message=`Saved custom USD/million-token rates for ${model}.`;}
  function setFilter(s){filter=s;selection=0;offset=0;}
@@ -94,8 +95,9 @@ export function createExplorer(data,{cwd=process.cwd(),settings=readSettings(),p
   rule();
   const crumb=['Projects',project&&path.basename(project.name),session&&truncate(session.title,32),agent&&agent.label].filter(Boolean).join('  ›  ');
   line(`  ${c(crumb,'1')}     ${c('PERIOD','90')} ${describePeriod(currentPeriod,settings)}     ${c('SORT','90')} ${sort} ${descending?'↓':'↑'}`);
-  line(`  ${c('TOTAL','90')} ${fmt(totalTokens(report.overall))} tokens     ${fmt(report.overall.requests)} requests     ${c(money(report.overall),'1;32')} API-equivalent`);
-  const planLabel=planUsage?`5h ${planUsage.fiveHour??'—'}%  ·  7d ${planUsage.sevenDay??'—'}%  ·  ${Date.now()-planUsage.timestamp>15*60000?'Cached, may be outdated':'Cached, recent'}  ·  ${new Date(planUsage.timestamp).toLocaleString()}`:'Claude Desktop plan usage unavailable';
+  const scoped=view==='sessions'?project?.stats:view==='agents'?session?.stats:view==='models'?(agent?.stats||session?.stats||project?.stats||report.overall):report.overall;
+  line(`  ${c('TOTAL','90')} ${fmt(totalTokens(scoped))} tokens     ${fmt(scoped.requests)} requests     ${c(money(scoped),'1;32')} API-equivalent`);
+  const planLabel=planUsage?`5h ${planUsage.fiveHour??'—'}% · 7d ${planUsage.sevenDay??'—'}% · ${planUsage.stale?'Cached, may be outdated':'Cached, recent'}`:'Claude Desktop plan usage unavailable';
   line(`  ${c('PLAN LIMITS','1;36')}  ${c(planLabel,'90')}`);
   rule();
   const available=rows();selection=Math.max(0,Math.min(selection,Math.max(0,available.length-1)));
@@ -109,16 +111,19 @@ export function createExplorer(data,{cwd=process.cwd(),settings=readSettings(),p
   if(selection<offset)offset=selection;if(selection>=offset+visible)offset=selection-visible+1;
   // Keep columns aligned by terminal width, shrinking the name first.
   const columns=width>=135?[['REQ',7,'requests'],['INPUT',10,'input'],['OUTPUT',10,'output'],['C.WRITE',12,'cacheWrite'],['C.READ',13,'cacheRead'],['TOKENS',14,'tokens'],['USD',13,'cost']]:width>=105?[['REQ',7,'requests'],['OUTPUT',11,'output'],['C.WRITE',13,'cacheWrite'],['C.READ',14,'cacheRead'],['TOKENS',15,'tokens'],['USD',12,'cost']]:[['REQ',7,'requests'],['TOKENS',15,'tokens'],['USD',13,'cost']];
-  const labelWidth=Math.max(17,width-5-columns.reduce((sum,[,n])=>sum+n+1,0));
+  const rightMargin=4; // Always leave a few columns clear of the terminal's right edge.
+  const labelWidth=Math.max(17,width-5-rightMargin-7-columns.reduce((sum,[,n])=>sum+n+1,0));
   if(!['periods','settings','sort'].includes(view)){
-    line(c('  '+pad('NAME',labelWidth)+' '+columns.map(([name,n,key])=>pad(name+(sort===key?(descending?'↓':'↑'):''),n,'right')).join(' '),'1;36'));
+    line(c('  '+pad('NAME',labelWidth)+' '+pad('SHARE',6,'right')+' '+columns.map(([name,n,key])=>pad(name+(sort===key?(descending?'↓':'↑'):''),n,'right')).join(' '),'1;36'));
   }
   for(let i=offset;i<Math.min(available.length,offset+visible);i++){
     const x=available[i],active=i===selection;
     let text;
     if(['periods','settings','sort'].includes(view))text=`  ${active?'❯':' '} ${x.label}${view==='periods'&&x.value===currentPeriod?'   ✓':''}`;
     else {const s=x.stats;const vals={requests:fmt(s.requests),input:fmt(s.input),output:fmt(s.output),cacheWrite:fmt(s.cacheWrite),cacheRead:fmt(s.cacheRead),tokens:fmt(totalTokens(s)),cost:money(s)};
-      text=`  ${active?'❯':' '} ${pad(x.label,labelWidth)} `+columns.map(([,n,key])=>pad(vals[key],n,'right')).join(' ');
+      const parentTotal=view==='projects'?totalTokens(report.overall):view==='sessions'?totalTokens(project?.stats):view==='agents'?totalTokens(session?.stats):totalTokens(agent?.stats||report.overall);
+      const pct=parentTotal>0?(totalTokens(s)>0&&100*totalTokens(s)/parentTotal<0.05?'<0.1%':(100*totalTokens(s)/parentTotal).toFixed(1)+'%'):'—';
+      text=`  ${active?'❯':' '} ${pad(x.label,labelWidth)} ${pad(pct,6,'right')} `+columns.map(([,n,key])=>pad(vals[key],n,'right')).join(' ');
     }
     line(active?c(truncate(text,width),'7'):truncate(text,width));
   }
@@ -128,7 +133,7 @@ export function createExplorer(data,{cwd=process.cwd(),settings=readSettings(),p
   for(let i=renderedRows;i<visible;i++)line('');
   line(c(`  ${available.length?`${offset+1}–${Math.min(available.length,offset+visible)} of ${available.length}`:'0 rows'}   •   PgUp/PgDn scroll`,'90'));
   rule();
-  line(c('  MODEL BREAKDOWN · SELECTED ROW','1;36')+c('    (M: full model table)','90'));
+  line(c('  MODELS IN SELECTED ROW','1;36')+c('    (M: full model table)','90'));
   const models=breakdown?[...breakdown].sort((a,b)=>totalTokens(b.stats)-totalTokens(a.stats)).slice(0,5):[];
   for(let i=0;i<5;i++){
     const m=models[i];
@@ -136,12 +141,12 @@ export function createExplorer(data,{cwd=process.cwd(),settings=readSettings(),p
   }
   rule();
   line(c('  ↑↓ Navigate   ENTER Open   BACKSPACE Back   M Models   D Dates   O Sort   / Search','1'));
-  line(c('  B Billing/settings   S Reverse sort   C Current project   R Refresh   L Live   ? Help   Q Quit','90'));
+  line(c('  B Settings   S Reverse sort   C Current project   E Open session   ? Help   Q Quit','90'));
   line(c('  '+(filter?'Search: '+truncate(filter,width-12):' '),'36'));
   line(c(`  ${liveState.enabled?'● LIVE':'Ⅱ PAUSED'} · Updated ${Math.max(0,Math.floor((Date.now()-liveState.lastUpdated)/1000))}s ago${liveState.error?' · '+liveState.error:''}`,'36')+(message?'  '+c(truncate(message,Math.max(10,width-65)),'33'):''));
   return out.slice(0,Math.max(1,height-1)).join('\n');
  }
- return {render,refreshPlan,get planUsage(){return planUsage;},rows,open,restore,switchView,nav,refresh,rescan,setLiveState,toggleLive,get liveState(){return liveState;},setPeriod,setBillingDay,setModelRate,setFilter,setSort,get view(){return view;},get currentPeriod(){return currentPeriod;},get settings(){return settings;},get cwd(){return cwd;},get selection(){return selection;},set selection(v){selection=v;},get sort(){return sort;},set sort(v){setSort(v);},get project(){return project;},set project(v){project=v;},get report(){return report;},get message(){return message;},set message(v){message=v;}};
+ return {render,refreshPlan,get planUsage(){return planUsage;},rows,open,restore,switchView,nav,refresh,rescan,setLiveState,toggleLive,get liveState(){return liveState;},setPeriod,setBillingDay,setModelRate,setFilter,setSort,get view(){return view;},get currentPeriod(){return currentPeriod;},get settings(){return settings;},get cwd(){return cwd;},get selection(){return selection;},set selection(v){selection=v;},get sort(){return sort;},set sort(v){setSort(v);},get project(){return project;},set project(v){project=v;},get session(){return session;},get report(){return report;},get message(){return message;},set message(v){message=v;}};
 }
 // Clip colored output to the terminal viewport to prevent line wrapping and scroll flashes.
 export function clipAnsi(value, maxWidth) {
@@ -185,8 +190,7 @@ export async function launchTui(argv=[]){
   checking=true;
   try{
    const next=historySignature(roots);
-   if(next!==lastSignature){explorer.rescan(roots,{automatic:true});lastSignature=next;}
-   explorer.refreshPlan();draw();
+   if(next!==lastSignature){explorer.rescan(roots,{automatic:true});lastSignature=next;draw();}
    explorer.setLiveState({lastCheck:Date.now()});
   }catch(e){explorer.setLiveState({error:e.message});draw();}
   finally{checking=false;}
@@ -229,11 +233,31 @@ export async function launchTui(argv=[]){
   else if(str==='b')explorer.nav('settings');
   else if(str==='o')explorer.nav('sort');
   else if(str==='s')explorer.setSort(explorer.sort);
+  else if(str==='C'){
+   const selected=explorer.view==='sessions'?explorer.rows()[explorer.selection]:explorer.session;
+   if(selected?.id&&process.platform==='darwin'){
+    const result=spawnSync('pbcopy',[],{input:selected.id,encoding:'utf8'});
+    explorer.message=result.status===0?'Session ID copied.':'Unable to copy session ID.';
+   }else explorer.message='Select a session on macOS to copy its ID.';
+  }
+  else if(str==='e'){
+   const selected=explorer.view==='sessions'?explorer.rows()[explorer.selection]:explorer.session;
+   const directory=selected?.project||explorer.project?.name;
+   if(!selected?.id||!directory||process.platform!=='darwin')explorer.message='External resume requires a selected session on macOS.';
+   else if(!fs.existsSync(directory))explorer.message='Original project directory is missing.';
+   else {
+    const quote=x=>"'"+String(x).replaceAll("'","'\\''")+"'";
+    const command=`cd ${quote(directory)} && claude --resume ${quote(selected.id)}`;
+    const script=`tell application "Terminal" to do script ${JSON.stringify(command)}`;
+    const result=spawnSync('osascript',['-e',script],{encoding:'utf8',timeout:10000});
+    explorer.message=result.status===0?'Opened in Terminal.app.':`Unable to open Terminal: ${(result.stderr||'').slice(0,80)}`;
+   }
+  }
   else if(str==='c'){explorer.switchView('projects');const i=explorer.rows().findIndex(x=>path.resolve(x.name).toLowerCase()===path.resolve(explorer.cwd).toLowerCase());if(i>=0){explorer.selection=i;explorer.open();}else explorer.message='No exact match for current directory.';}
   else if(str==='/')explorer.setFilter(await ask('Filter table (empty clears):'));
   else if(str==='r'){explorer.rescan(roots);lastSignature=historySignature(roots);}
   else if(str==='l')explorer.toggleLive();
-  else if(str==='?'){await ask('HELP\n↑↓ select rows; Enter drills down; Backspace goes back.\nM shows models at the current level.\nD selects date range; B configures billing and model prices.\nO chooses a sort column; S reverses direction.\n/ filters; C opens current project; R rescans; L toggles live updates; Q quits.\n\nPress Enter to return.');}
+  else if(str==='?'){await ask('HELP\n↑↓ select rows; Enter drills down; Backspace goes back.\nM shows models at the current level.\nD selects date range; B configures billing and model prices.\nO chooses a sort column; S reverses direction.\n/ filters; C copies session ID; E opens selected session externally; R rescans; L toggles live updates; Q quits.\n\nPress Enter to return.');}
   draw();
  }
  process.stdin.on('keypress',onKey);process.stdout.on('resize',resize);resize();

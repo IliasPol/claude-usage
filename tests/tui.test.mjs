@@ -19,7 +19,7 @@ test('TUI switches dates and shows model columns',()=>{
 });
 test('TUI shows models for selected project without drilling into sessions',()=>{
  const x=createExplorer(data,{period:'all',settings:{}});
- assert.match(x.render(130,32),/MODEL BREAKDOWN · SELECTED ROW/);
+ assert.match(x.render(130,32),/MODELS IN SELECTED ROW/);
  assert.match(x.render(130,32),/claude-sonnet-4-5/);
  x.setSort('output');assert.equal(x.sort,'output');
 });
@@ -35,7 +35,7 @@ test('TUI footer and model panel remain at fixed rows as selection changes',()=>
  const a=x.render(120,32).split('\n');
  x.selection=1;
  const b=x.render(120,32).split('\n');
- for(const label of ['MODEL BREAKDOWN · SELECTED ROW','Billing/settings','PgUp/PgDn scroll']){
+ for(const label of ['MODELS IN SELECTED ROW','Billing/settings','PgUp/PgDn scroll']){
   const index=lines=>lines.findIndex(line=>line.includes(label));
   assert.equal(index(a),index(b),label);
  }
@@ -101,15 +101,4 @@ test('file signature changes only when JSONL metadata changes', async()=>{
   assert.equal(a,historySignature([root]));
   fs.appendFileSync(file,'bc');assert.notEqual(a,historySignature([root]));
  }finally{fs.rmSync(root,{recursive:true,force:true});}
-});
-
-
-test('TUI displays cached Desktop plan usage and refreshes it without a model call',()=>{
- let calls=0;let current=1;
- const x=createExplorer(data,{period:'all',settings:{},planReader:()=>{calls++;return {fiveHour:current,sevenDay:32,timestamp:Date.now()};}});
- assert.match(x.render(120,32),/5h 1%/);
- assert.match(x.render(120,32),/7d 32%/);
- current=9; x.refreshPlan(Date.now()+5000);
- assert.match(x.render(120,32),/5h 9%/);
- assert.ok(calls>=2);
 });

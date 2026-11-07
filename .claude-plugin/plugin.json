@@ -1,7 +1,7 @@
 {
   "name": "claude-usage",
   "description": "Local, read-only Claude Code usage analytics with a native sidebar and standalone terminal UI",
-  "version": "1.1.0",
+  "version": "1.1.6",
   "author": {
     "name": "IliasPol"
   },

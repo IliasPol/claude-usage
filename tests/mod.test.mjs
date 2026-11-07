@@ -1,7 +1,7 @@
 import {readFileSync} from 'node:fs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {drill,back,itemsFor,modelScope,register,scriptPathFromModuleUrl} from '../hooks/usage-explorer.mjs';
+import {drill,back,itemsFor,modelScope,register} from '../hooks/usage-explorer.mjs';
 const stats={input:5,output:2,cacheWrite:0,cacheRead:10,knownCost:0.25,unknownCostRequests:0};
 const agent={id:'main',stats,models:[{name:'sonnet',stats}]};
 const session={id:'s1',title:'Build feature',project:'/repo',stats,agents:[agent],models:agent.models};
@@ -70,7 +70,7 @@ test('models screen has a prominent back control and footer close-models action'
  const ui={resolve:()=>Object.fromEntries(['Box','Text','Button','Input'].map(k=>[k,p=>({type:k,...p})]))};
  const element=render({ui},{surface:'terminal'},()=>null);
  const flat=node=>[node,...(Array.isArray(node?.children)?node.children:[]).flatMap(flat)];
- assert.match(requireSource(),/MODEL BREAKDOWN/);
+ assert.match(requireSource(),/MODEL USAGE/);
  const modSource=requireSource();
  assert.match(modSource,/Back to previous view/);
  assert.match(modSource,/Close models/);
@@ -107,38 +107,71 @@ test('period choices stack vertically and footer is outside expanding content',(
  assert.match(source,/flexDirection:'column',gap:0,children:periodButtons/);
 });
 
-test('native sidebar converts file URLs to OS paths, including Windows drive letters',()=>{
- const source=requireSource();
- assert.match(source,/scriptPathFromModuleUrl\(import\.meta\.url\)/);
- assert.doesNotMatch(source,/decodeURIComponent\(new URL\('\.\.\/bin\/claude-usage\.mjs'/);
+test('official usage bars clamp percentages and show enterprise extra usage',async()=>{
+ const {usageBar,officialLimitRows}=await import('../hooks/usage-explorer.mjs');
+ assert.match(usageBar(37.66,10),/37\.7%/);
+ assert.match(usageBar(130,10),/100\.0%/);
+ assert.match(usageBar(-1,10),/0\.0%/);
+ const rows=officialLimitRows({rateLimits:[],details:['extra_usage: utilization: 37.66 · is_enabled: true']});
+ assert.deepEqual(rows,[{label:'extra_usage',percent:37.66,resetsAt:''}]);
 });
 
-test('native hook resolves macOS and Windows paths without node built-in imports',()=>{
- assert.equal(scriptPathFromModuleUrl('file:///Users/example/plugin/hooks/usage-explorer.mjs'),'/Users/example/plugin/bin/claude-usage.mjs');
- assert.equal(scriptPathFromModuleUrl('file:///C:/Users/example/plugin/hooks/usage-explorer.mjs'),'C:/Users/example/plugin/bin/claude-usage.mjs');
- assert.equal(scriptPathFromModuleUrl('file:///C:/Users/Test%20User/plugin/hooks/usage-explorer.mjs'),'C:/Users/Test User/plugin/bin/claude-usage.mjs');
- assert.doesNotMatch(requireSource(),/from ['"]node:/);
+test('usage response diagnostic exposes field names and types only',async()=>{
+ const {usageSchema}=await import('../hooks/usage-explorer.mjs');
+ const fields=usageSchema({extra_usage:{utilization:37.66,resets_at:'secret-date'},billing:{cycle_start:'private',cap:200},some_id:'private-id'});
+ assert.ok(fields.includes('extra_usage.utilization: number'));
+ assert.ok(fields.includes('billing.cycle_start: string'));
+ assert.ok(!fields.join(' ').includes('private'));
+ assert.ok(!fields.join(' ').includes('37.66'));
 });
 
-test('sidebar separates cached plan limits from API estimates and keeps concise controls',()=>{
+
+test('native mod uses only supported single-letter or digit hotkeys',()=>{
  const hooks=[];register((event,matcher,fn)=>hooks.push({event,fn:fn||matcher}));
  const render=hooks.find(x=>x.event==='ui.render').fn;
  const ui={resolve:()=>Object.fromEntries(['Box','Text','Button','Input'].map(k=>[k,p=>({type:k,...p})]))};
  const element=render({ui},{surface:'terminal'},()=>null);
  const flat=node=>[node,...(Array.isArray(node?.children)?node.children:[]).flatMap(flat)];
- const all=flat(element);
- assert.ok(all.some(x=>x.type==='Text'&&x.children==='PLAN LIMITS'));
- assert.ok(all.some(x=>x.type==='Text'&&String(x.children).includes('est. API cost')) || all.some(x=>x.type==='Text'&&String(x.children).includes('Loading local usage')));
- assert.ok(all.some(x=>x.type==='Text'&&String(x.children).includes('Esc close')));
- assert.equal(element.children.at(-1).flexShrink,0);
+ const buttons=flat(element).filter(x=>x.type==='Button');
+ for(const b of buttons){if(b.hotkey!==undefined)assert.match(b.hotkey,/^[a-z0-9]$/,`invalid hotkey on ${b.label}`);}
+ assert.equal(buttons.some(b=>b.label==='Help'),false);
 });
 
 
-test('native pane uses supplied terminal viewport rows to reserve bottom footer',()=>{
- const hooks=[];register((event,matcher,fn)=>hooks.push({event,fn:fn||matcher}));
- const render=hooks.find(x=>x.event==='ui.render').fn;
- const ui={resolve:()=>Object.fromEntries(['Box','Text','Button','Input'].map(k=>[k,p=>({type:k,...p})]))};
- const element=render({ui},{surface:'terminal',presentation:{rows:42}},()=>null);
- assert.equal(element.height,39);
- assert.equal(element.children.at(-1).flexShrink,0);
+test('native sidebar removes diagnostic and provides session open actions',async()=>{
+ const {sessionResumeCommand}=await import('../hooks/usage-explorer.mjs');
+ const command=sessionResumeCommand({id:'bf9de351-f0e6-48cc-a941-21e3705fe379',project:'/Users/example/my repo'});
+ assert.match(command,/claude --resume/);
+ assert.match(command,/my repo/);
+ assert.throws(()=>sessionResumeCommand({id:'bad',project:'/repo'}));
+ const source=readFileSync(new URL('../hooks/usage-explorer.mjs',import.meta.url),'utf8');
+ assert.doesNotMatch(source,/Show response fields|Hide response fields|USAGE RESPONSE FIELD TYPES/);
+ assert.doesNotMatch(source,/session-open-terminal|session-copy-id/);
+ assert.match(source,/action\('Open session','o'/);
+ assert.match(source,/action\('Copy ID','c'/);
+});
+
+import { readFileSync as readModSource } from "node:fs";
+import { fileURLToPath as modFilePath } from "node:url";
+import { dirname as modDirname, join as modJoin } from "node:path";
+test("session actions use focused session from list and parent session deeper", async () => {
+ const {selectedSessionForAction}=await import('../hooks/usage-explorer.mjs');
+ const a={...session,id:'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa'};
+ const b={...session,id:'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb'};
+ const s={view:'sessions',project:'/repo',report:{...report,sessions:[a,b]}};
+ assert.equal(selectedSessionForAction(s,b.id),b);
+ assert.equal(selectedSessionForAction(s,null),null);
+ assert.equal(selectedSessionForAction({...s,view:'agents',session:a},b.id),a);
+ const source=requireSource();
+ assert.match(source,/onFocus:\(\)=>\{if\(state.view==='sessions'\)focusedSessionId=item.id/);
+ assert.doesNotMatch(source,/key:'session-open-terminal'|key:'session-copy-id'/);
+});
+
+test('agent rows hide IDs until drilldown and show main label',async()=>{
+ const {agentLabel}=await import('../hooks/usage-explorer.mjs');
+ assert.equal(agentLabel({id:'main'}),'Agent (main)');
+ assert.equal(agentLabel({id:'af22fd9030fbd751f'}),'Subagent');
+ assert.equal(agentLabel({id:'af22fd9030fbd751f',name:'code-reviewer'}),'code-reviewer');
+ const state={view:'agents',stack:[],project:'/repo',session:{...session,id:'different-session',agents:[{...agent,id:'af22fd9030fbd751f',name:'code-reviewer'}]},agent:null,report,sort:'tokens',query:''};
+ assert.equal(itemsFor(state)[0].label,'code-reviewer');
 });
