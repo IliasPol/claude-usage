@@ -5,7 +5,7 @@
 [![npm version](https://img.shields.io/npm/v/claude-usage-explorer.svg)](https://www.npmjs.com/package/claude-usage-explorer)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-## What's new in v1.1.0
+## What's new in v1.1.6
 
 - **Session actions:** open or copy session identifiers from supported views.
 - **Account usage diagnostics:** optional official usage-limit and extra-spend information when accessible; not the same as estimated API-equivalent cost.
